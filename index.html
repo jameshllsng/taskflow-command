@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow Command</title>
+  <!-- Bootstrap 5 CSS + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <main id="login-screen" class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-5 col-md-7 col-12">
+        <div class="header mb-0">
+          <h1 class="h3 mb-0"><i class="bi bi-shield-lock me-2"></i>Acesso Seguro</h1>
+          <small class="opacity-75">Entre com seu usuário para acessar o TaskFlow Command.</small>
+        </div>
+        <div class="todo-card p-4">
+          <form id="login-form">
+            <div class="mb-3">
+              <label class="form-label" for="login-username">Usuário</label>
+              <input id="login-username" class="form-control form-control-lg" type="text" autocomplete="username" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="login-password">Senha</label>
+              <input id="login-password" class="form-control form-control-lg" type="password" autocomplete="current-password" required>
+            </div>
+            <div id="aviso-login" class="alert alert-danger d-none py-2 mb-3" role="alert"></div>
+            <button type="submit" class="btn btn-noir-primary btn-lg w-100">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Entrar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <main id="app-shell" class="container-fluid d-none">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-md-10 col-12">
+        <div class="header mb-0 d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <h1 class="h3 mb-0"><i class="bi bi-list-check me-2"></i>TaskFlow Command</h1>
+            <small class="opacity-75">Transforme tarefas soltas em progresso real, com foco, prazo e resultado.</small>
+          </div>
+          <div class="text-end">
+            <small id="usuario-logado" class="opacity-75 d-block"></small>
+            <div class="d-flex gap-2 justify-content-end mt-2 flex-wrap">
+              <button id="btn-home" class="btn btn-noir-secondary btn-sm d-none">
+                <i class="bi bi-house me-1"></i> Chamados
+              </button>
+              <button id="btn-usuarios" class="btn btn-noir-secondary btn-sm d-none">
+                <i class="bi bi-people me-1"></i> Usuários
+              </button>
+              <button id="btn-admin-chamados" class="btn btn-noir-secondary btn-sm d-none">
+                <i class="bi bi-grid-1x2 me-1"></i> Exclusão em Massa
+              </button>
+              <button id="btn-logout" class="btn btn-danger btn-sm">
+                <i class="bi bi-box-arrow-right me-1"></i> Sair
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="popup-notificacao" class="popup-notificacao d-none" role="alert" aria-live="assertive">
+          <div class="popup-titulo"><i class="bi bi-bell-fill me-2"></i>Notificação</div>
+          <div id="popup-notificacao-texto" class="popup-texto"></div>
+        </div>
+        <div id="popup-overlay" class="popup-overlay d-none" aria-hidden="true"></div>
+
+        <section id="view-tarefas">
+          <div class="todo-card p-4">
+            <div class="input-group input-group-custom mb-4" style="max-width: 100%;">
+              <input id="tarefa" class="form-control form-control-lg" type="text" placeholder="Descreva a tarefa...">
+              <input id="prazo" class="form-control form-control-lg" type="datetime-local" title="Prazo para conclusão (padrão: 1 dia)">
+
+              <select id="status" class="form-select form-select-lg">
+                <option value="nova">Nova</option>
+                <option value="andamento">Em Andamento</option>
+                <option value="concluida">Concluída</option>
+                <option value="aguardando">Aguardando</option>
+              </select>
+              <select id="atribuida-para" class="form-select form-select-lg" title="Atribuir tarefa para um usuário">
+                <option value="">Sem atribuição</option>
+              </select>
+              <button id="adicionar" class="btn btn-noir-primary btn-lg">
+                <i class="bi bi-plus-lg"></i> Adicionar
+              </button>
+            </div>
+            <div class="mb-3">
+              <textarea id="descricao-tarefa" class="form-control" rows="3" placeholder="Descrição da tarefa (opcional)"></textarea>
+            </div>
+            <div id="aviso" class="alert alert-warning d-none py-2 mb-3" role="alert" aria-live="polite"></div>
+
+            <div class="filtros d-flex flex-wrap gap-2 mb-4 justify-content-center">
+              <button class="btn btn-noir-secondary filtro active btn-noir-primary" data-status="todas">Todas</button>
+              <button class="btn btn-noir-secondary filtro" data-status="nova">Nova</button>
+              <button class="btn btn-noir-secondary filtro" data-status="andamento">Andamento</button>
+              <button class="btn btn-noir-secondary filtro" data-status="concluida">Concluída</button>
+              <button class="btn btn-noir-secondary filtro" data-status="aguardando">Aguardando</button>
+            </div>
+
+            <ul id="tarefas" class="list-unstyled"></ul>
+          </div>
+        </section>
+
+        <section id="view-usuarios" class="d-none">
+          <div id="painel-usuarios" class="todo-card p-4 mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <h2 class="h5 mb-0"><i class="bi bi-people-fill me-2"></i>Gerenciamento de Usuários</h2>
+            </div>
+            <div id="aviso-usuarios" class="alert alert-warning d-none py-2 mb-3" role="alert"></div>
+            <form id="form-usuario" class="row g-2 mb-4">
+              <input type="hidden" id="usuario-id">
+              <div class="col-md-4">
+                <input id="usuario-nome" class="form-control" type="text" placeholder="Usuário" required>
+              </div>
+              <div class="col-md-4">
+                <input id="usuario-senha" class="form-control" type="password" placeholder="Senha (opcional na edição)">
+              </div>
+              <div class="col-md-2">
+                <select id="usuario-papel" class="form-select">
+                  <option value="user">Usuário</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-noir-primary">Salvar</button>
+              </div>
+              <div class="col-12 d-grid">
+                <button id="btn-cancelar-edicao-usuario" type="button" class="btn btn-noir-secondary d-none">Cancelar edição</button>
+              </div>
+            </form>
+            <ul id="lista-usuarios" class="list-unstyled mb-0"></ul>
+          </div>
+        </section>
+
+        <section id="view-admin-chamados" class="d-none">
+          <div class="todo-card p-4 mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <h2 class="h5 mb-0"><i class="bi bi-stack me-2"></i>Exclusão de Chamados (Admin)</h2>
+            </div>
+            <div id="aviso-admin-chamados" class="alert alert-warning d-none py-2 mb-3" role="alert"></div>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+              <label class="d-flex align-items-center gap-2 m-0">
+                <input id="select-all-chamados" type="checkbox">
+                <span>Selecionar todos</span>
+              </label>
+              <div class="d-flex align-items-center gap-2">
+                <small id="contador-selecionados" class="usuario-meta">0 selecionado(s)</small>
+                <button id="btn-excluir-selecionados" class="btn btn-danger btn-sm" type="button">Excluir selecionados</button>
+              </div>
+            </div>
+            <div id="lista-chamados-admin" class="row g-2"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>

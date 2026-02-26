@@ -1,0 +1,286 @@
+/* NOIR THEME - CSS Variables Elegantes */
+:root {
+  /* Fundo & Cards */
+  --noir-bg: #0a0a0a;
+  --noir-card: #1a1a1a;
+  --noir-input: #2a2a2a;
+
+  /* Textos */
+  --noir-text: #e5e5e5;
+  --noir-meta: #a0a0a0;
+  --btn-text: #ffffff; /* BRANCO pra status-text! */
+
+  /* Cores Status */
+  --noir-accent: #b91c1c; /* Vermelho sangue */
+  --noir-gold: #d97706; /* Ouro sujo */
+  --border-subtle: #404040;
+
+  /* Botões Status */
+  --btn-bg-status: linear-gradient(135deg, #404040, #2a2a2a);
+  --btn-bg-status-hover: linear-gradient(135deg, #505050, #3a3a3a);
+
+  /* Sombras */
+  --shadow-glow: 0 4px 16px rgba(185, 28, 28, 0.3);
+}
+
+/* Body Global */
+body {
+  font-family:
+    "Inter",
+    -apple-system,
+    sans-serif;
+  background: var(--noir-bg);
+  color: var(--noir-text);
+  padding-top: 20px;
+}
+
+/* Header Gradient */
+.header {
+  background: linear-gradient(135deg, #1a0000, #2a0000);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px 12px 0 0;
+  margin-bottom: 0;
+}
+
+/* Card Principal */
+.todo-card {
+  background: var(--noir-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* Inputs Dark */
+.input-group-custom input,
+.input-group-custom select {
+  background: var(--noir-input) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--noir-text) !important;
+}
+
+.input-group-custom input::placeholder {
+  color: var(--noir-meta);
+}
+
+.todo-card .form-control,
+.todo-card .form-select {
+  background: var(--noir-input);
+  border-color: var(--border-subtle);
+  color: var(--noir-text);
+}
+
+.todo-card .form-control::placeholder {
+  color: var(--noir-meta);
+}
+
+.todo-card .form-label {
+  color: var(--noir-meta);
+}
+
+/* Botões Base */
+.btn-noir-primary {
+  background: var(--noir-accent);
+  border-color: var(--noir-accent);
+}
+
+.btn-noir-primary:hover {
+  background: #991b1b;
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-noir-secondary {
+  background: #404040;
+  border-color: #505050;
+  color: var(--btn-text) !important; /* BRANCO! */
+}
+
+.btn-noir-edit {
+  background: var(--noir-gold);
+  border-color: var(--noir-gold);
+  color: var(--btn-text) !important;
+}
+
+/* STATUS BTN - FIX VISIBILIDADE */
+.status-btn {
+  background: var(--btn-bg-status) !important;
+  border: 1px solid #606060 !important;
+  color: var(--btn-text) !important; /* BRANCO PURO */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); /* Sombra contraste */
+  font-weight: 600;
+}
+
+.status-btn:hover {
+  background: var(--btn-bg-status-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Itens Lista */
+.todo-item {
+  background: var(--noir-input);
+  border-left: 4px solid transparent;
+  transition: all 0.3s;
+  min-height: 90px;
+  margin-bottom: 1rem;
+}
+
+.todo-item:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.todo-item.nova {
+  border-left-color: var(--noir-gold);
+}
+.todo-item.andamento {
+  border-left-color: #3b82f6;
+}
+.todo-item.concluida {
+  border-left-color: #10b981;
+  opacity: 0.8;
+  text-decoration: line-through;
+}
+.todo-item.aguardando {
+  border-left-color: #8b5cf6;
+}
+
+.meta-text {
+  font-size: 0.85rem;
+  color: var(--noir-meta);
+}
+
+/* Filtros Responsivos */
+.filtros .btn {
+  min-width: 100px;
+  font-size: 0.9rem;
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .filtros {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .input-group-custom {
+    flex-direction: column;
+  }
+
+  .acoes {
+    justify-content: flex-end !important;
+  }
+}
+
+/* Scroll suave */
+html {
+  scroll-behavior: smooth;
+}
+
+.filtro.active {
+  box-shadow: var(--shadow-glow);
+}
+
+.todo-item.text-center {
+  border-left-color: var(--border-subtle);
+}
+
+.usuario-item {
+  background: var(--noir-input);
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--noir-accent);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+}
+
+.usuario-meta {
+  color: var(--noir-meta);
+  font-size: 0.85rem;
+}
+
+.descricao-tarefa {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: #d0d0d0;
+  word-break: break-word;
+}
+
+.top-nav-active {
+  box-shadow: var(--shadow-glow);
+}
+
+.chamado-card-compacto {
+  background: var(--noir-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.65rem;
+  height: 100%;
+}
+
+.chamado-card-compacto .titulo {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.chamado-card-compacto .meta {
+  color: var(--noir-meta);
+  font-size: 0.78rem;
+}
+
+.popup-notificacao {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1080;
+  width: min(680px, 92vw);
+  border: 1px solid #7f1d1d;
+  border-left: 4px solid var(--noir-accent);
+  border-radius: 14px;
+  background: #1a1a1a;
+  color: #f5f5f5;
+  padding: 1.2rem;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: popupIn 0.2s ease-out;
+}
+
+.popup-notificacao:not(.d-none) {
+  display: block !important;
+}
+
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 1070;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.popup-overlay.d-none {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.popup-titulo {
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-bottom: 0.35rem;
+}
+
+.popup-texto {
+  color: #d4d4d4;
+  font-size: 1.05rem;
+}
+
+@keyframes popupIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

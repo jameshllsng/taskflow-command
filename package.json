@@ -1,0 +1,9 @@
+{
+  "name": "todolist-noir",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lista de tarefas com frontend estático e backend Node sem dependências",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
