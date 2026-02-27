@@ -4,15 +4,20 @@ const fsp = fs.promises;
 const path = require("path");
 const { URL } = require("url");
 const crypto = require("crypto");
+const os = require("os");
+const Database = require("better-sqlite3");
 
 const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const TASKS_FILE = path.join(DATA_DIR, "tarefas.json");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
+const DB_FILE = path.join(DATA_DIR, "taskflow.db");
 const SESSION_DURATION_MS = 6 * 60 * 60 * 1000;
 
 const sessions = new Map();
+let db = null;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -43,8 +48,48 @@ function sanitizeUser(user) {
   return {
     id: user.id,
     username: user.username,
+    displayName: user.displayName || user.username,
     role: user.role,
     createdAt: user.createdAt,
+  };
+}
+
+function taskKey(task, index) {
+  if (task && task.id !== undefined && task.id !== null) {
+    return `id:${String(task.id)}`;
+  }
+  if (task && task.criada !== undefined && task.criada !== null) {
+    return `criada:${String(task.criada)}:${index}`;
+  }
+  return `idx:${index}:${JSON.stringify(task || {})}`;
+}
+
+function buildTaskCountMap(tasks) {
+  const map = new Map();
+  tasks.forEach((task, index) => {
+    const key = taskKey(task, index);
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+  return map;
+}
+
+function buildTaskBuckets(tasks) {
+  const buckets = new Map();
+  tasks.forEach((task, index) => {
+    const key = taskKey(task, index);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(task || {});
+  });
+  return buckets;
+}
+
+function protectedTaskSnapshot(task) {
+  return {
+    texto: String(task?.texto || ""),
+    descricao: String(task?.descricao || ""),
+    prazo: task?.prazo ?? null,
+    atribuidaParaId: task?.atribuidaParaId ?? null,
+    atribuidaParaNome: task?.atribuidaParaNome ?? null,
   };
 }
 
@@ -66,47 +111,147 @@ function verifyPassword(password, encoded) {
   return crypto.timingSafeEqual(left, right);
 }
 
-async function ensureDataFiles() {
-  await fsp.mkdir(DATA_DIR, { recursive: true });
+function initDatabase() {
+  db = new Database(DB_FILE);
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      position INTEGER NOT NULL,
+      payload TEXT NOT NULL
+    );
+  `);
+}
+
+async function readJsonArrayIfExists(filePath) {
   try {
-    await fsp.access(TASKS_FILE, fs.constants.F_OK);
+    const raw = await fsp.readFile(filePath, "utf8");
+    const parsed = parseJson(raw || "[]", []);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    await fsp.writeFile(TASKS_FILE, "[]\n", "utf8");
+    return [];
+  }
+}
+
+function readUsersFromDb() {
+  const rows = db
+    .prepare(
+      "SELECT id, username, display_name, password_hash, role, created_at FROM users ORDER BY username COLLATE NOCASE ASC",
+    )
+    .all();
+  return rows.map((row) => ({
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    passwordHash: row.password_hash,
+    role: row.role,
+    createdAt: row.created_at,
+  }));
+}
+
+function writeUsersToDb(users) {
+  const insert = db.prepare(
+    "INSERT INTO users (id, username, display_name, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  );
+  const transaction = db.transaction((items) => {
+    db.prepare("DELETE FROM users").run();
+    items.forEach((user) => {
+      insert.run(
+        user.id,
+        user.username,
+        user.displayName || user.username,
+        user.passwordHash,
+        user.role,
+        user.createdAt,
+      );
+    });
+  });
+  transaction(users);
+}
+
+function readTasksFromDb() {
+  const rows = db.prepare("SELECT payload FROM tasks ORDER BY position ASC").all();
+  return rows
+    .map((row) => parseJson(row.payload, null))
+    .filter((item) => item && typeof item === "object");
+}
+
+function writeTasksToDb(tasks) {
+  const insert = db.prepare("INSERT INTO tasks (position, payload) VALUES (?, ?)");
+  const transaction = db.transaction((items) => {
+    db.prepare("DELETE FROM tasks").run();
+    items.forEach((task, index) => {
+      insert.run(index, JSON.stringify(task || {}));
+    });
+  });
+  transaction(tasks);
+}
+
+async function ensureDataStore() {
+  await fsp.mkdir(DATA_DIR, { recursive: true });
+  initDatabase();
+
+  const hasUsers = db.prepare("SELECT COUNT(*) AS total FROM users").get().total > 0;
+  if (!hasUsers) {
+    const usersFromJson = await readJsonArrayIfExists(USERS_FILE);
+    if (usersFromJson.length > 0) {
+      writeUsersToDb(
+        usersFromJson.map((u) => ({
+          id: u.id || crypto.randomUUID(),
+          username: u.username,
+          displayName: u.displayName || u.username,
+          passwordHash: u.passwordHash || hashPassword("admin"),
+          role: u.role || "user",
+          createdAt: Number(u.createdAt) || now(),
+        })),
+      );
+    } else {
+      writeUsersToDb([
+        {
+          id: crypto.randomUUID(),
+          username: "admin",
+          displayName: "Administrador",
+          passwordHash: hashPassword("admin"),
+          role: "admin",
+          createdAt: now(),
+        },
+      ]);
+    }
   }
 
-  try {
-    await fsp.access(USERS_FILE, fs.constants.F_OK);
-  } catch {
-    const admin = {
-      id: crypto.randomUUID(),
-      username: "admin",
-      passwordHash: hashPassword("admin"),
-      role: "admin",
-      createdAt: now(),
-    };
-    await fsp.writeFile(USERS_FILE, `${JSON.stringify([admin], null, 2)}\n`, "utf8");
+  const hasTasks = db.prepare("SELECT COUNT(*) AS total FROM tasks").get().total > 0;
+  if (!hasTasks) {
+    const tasksFromJson = await readJsonArrayIfExists(TASKS_FILE);
+    if (tasksFromJson.length > 0) {
+      writeTasksToDb(tasksFromJson);
+    }
   }
 }
 
 async function readTasks() {
-  const raw = await fsp.readFile(TASKS_FILE, "utf8");
-  const parsed = parseJson(raw || "[]", []);
-  return Array.isArray(parsed) ? parsed : [];
+  return readTasksFromDb();
 }
 
 async function writeTasks(tasks) {
-  await fsp.writeFile(TASKS_FILE, `${JSON.stringify(tasks, null, 2)}\n`, "utf8");
+  writeTasksToDb(tasks);
 }
 
 async function readUsers() {
-  const raw = await fsp.readFile(USERS_FILE, "utf8");
-  const parsed = parseJson(raw || "[]", []);
-  return Array.isArray(parsed) ? parsed : [];
+  return readUsersFromDb();
 }
 
 async function writeUsers(users) {
-  await fsp.writeFile(USERS_FILE, `${JSON.stringify(users, null, 2)}\n`, "utf8");
+  writeUsersToDb(users);
 }
 
 function sendJson(res, statusCode, payload) {
@@ -295,6 +440,32 @@ async function handleAuth(req, res, pathname) {
     return sendJson(res, 200, { ok: true });
   }
 
+  if (pathname === "/api/auth/forgot-password") {
+    if (req.method !== "POST") return sendMethodNotAllowed(res);
+    try {
+      const body = await readBody(req);
+      const payload = parseJson(body, null);
+      const username = String(payload?.username || "").trim();
+      const newPassword = String(payload?.newPassword || "");
+
+      if (!username || newPassword.length < 3) {
+        return sendJson(res, 400, { error: "Usuário e nova senha válida são obrigatórios." });
+      }
+
+      const users = await readUsers();
+      const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
+      if (!user) {
+        return sendJson(res, 404, { error: "Usuário não encontrado." });
+      }
+
+      user.passwordHash = hashPassword(newPassword);
+      await writeUsers(users);
+      return sendJson(res, 200, { ok: true });
+    } catch {
+      return sendJson(res, 400, { error: "JSON inválido." });
+    }
+  }
+
   return sendNotFound(res);
 }
 
@@ -309,8 +480,14 @@ async function handleUsers(req, res, pathname) {
       res,
       200,
       users
-        .map((u) => ({ id: u.id, username: u.username }))
-        .sort((a, b) => a.username.localeCompare(b.username, "pt-BR")),
+        .map((u) => ({
+          id: u.id,
+          username: u.username,
+          displayName: u.displayName || u.username,
+        }))
+        .sort((a, b) =>
+          (a.displayName || a.username).localeCompare(b.displayName || b.username, "pt-BR"),
+        ),
     );
   }
 
@@ -335,6 +512,7 @@ async function handleUsers(req, res, pathname) {
         const payload = parseJson(body, null);
 
         const username = String(payload?.username || "").trim();
+        const displayName = String(payload?.displayName || "").trim();
         const password = String(payload?.password || "");
         const role = payload?.role === "admin" ? "admin" : "user";
 
@@ -344,6 +522,9 @@ async function handleUsers(req, res, pathname) {
 
         if (password.length < 3) {
           return sendJson(res, 400, { error: "Senha deve ter ao menos 3 caracteres." });
+        }
+        if (displayName.length < 2) {
+          return sendJson(res, 400, { error: "Nome de exibição deve ter ao menos 2 caracteres." });
         }
 
         const users = await readUsers();
@@ -355,6 +536,7 @@ async function handleUsers(req, res, pathname) {
         const newUser = {
           id: crypto.randomUUID(),
           username,
+          displayName,
           passwordHash: hashPassword(password),
           role,
           createdAt: now(),
@@ -382,11 +564,15 @@ async function handleUsers(req, res, pathname) {
         const payload = parseJson(body, null);
 
         const username = String(payload?.username || "").trim();
+        const displayName = String(payload?.displayName || "").trim();
         const password = String(payload?.password || "");
         const role = payload?.role === "admin" ? "admin" : "user";
 
         if (username.length < 3) {
           return sendJson(res, 400, { error: "Usuário deve ter ao menos 3 caracteres." });
+        }
+        if (displayName.length < 2) {
+          return sendJson(res, 400, { error: "Nome de exibição deve ter ao menos 2 caracteres." });
         }
 
         const users = await readUsers();
@@ -409,6 +595,7 @@ async function handleUsers(req, res, pathname) {
         }
 
         target.username = username;
+        target.displayName = displayName;
         target.role = role;
         if (password) {
           if (password.length < 3) {
@@ -480,6 +667,44 @@ async function handleTasks(req, res, pathname) {
         return sendJson(res, 400, { error: "Payload deve ser um array." });
       }
 
+      if (auth.user.role !== "admin") {
+        const atual = await readTasks();
+        const atualMap = buildTaskCountMap(atual);
+        const novoMap = buildTaskCountMap(payload);
+        const atualBuckets = buildTaskBuckets(atual);
+        const novoBuckets = buildTaskBuckets(payload);
+
+        let removeuTarefa = false;
+        for (const [key, countAtual] of atualMap.entries()) {
+          const countNovo = novoMap.get(key) || 0;
+          if (countNovo < countAtual) {
+            removeuTarefa = true;
+            break;
+          }
+        }
+
+        if (removeuTarefa) {
+          return sendJson(res, 403, {
+            error: "Apenas administradores podem excluir tarefas.",
+          });
+        }
+
+        for (const [key, atualList] of atualBuckets.entries()) {
+          const novoList = novoBuckets.get(key) || [];
+          const limite = Math.min(atualList.length, novoList.length);
+          for (let i = 0; i < limite; i += 1) {
+            const antigo = protectedTaskSnapshot(atualList[i]);
+            const novo = protectedTaskSnapshot(novoList[i]);
+            if (JSON.stringify(antigo) !== JSON.stringify(novo)) {
+              return sendJson(res, 403, {
+                error:
+                  "Usuário comum não pode editar nome, descrição, data ou atribuição após a criação.",
+              });
+            }
+          }
+        }
+      }
+
       await writeTasks(payload);
       return sendJson(res, 200, { ok: true, total: payload.length });
     } catch {
@@ -522,7 +747,7 @@ async function handler(req, res) {
 }
 
 async function start() {
-  await ensureDataFiles();
+  await ensureDataStore();
 
   const server = http.createServer((req, res) => {
     handler(req, res).catch((error) => {
@@ -531,8 +756,16 @@ async function start() {
     });
   });
 
-  server.listen(PORT, () => {
+  server.listen(PORT, HOST, () => {
+    const ifaces = Object.values(os.networkInterfaces())
+      .flat()
+      .filter((i) => i && i.family === "IPv4" && !i.internal)
+      .map((i) => i.address);
+
     console.log(`Servidor rodando em http://localhost:${PORT}`);
+    if (ifaces.length) {
+      console.log(`Acesso na rede local: http://${ifaces[0]}:${PORT}`);
+    }
     console.log("Usuário padrão: admin | Senha padrão: admin");
   });
 }

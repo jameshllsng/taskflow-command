@@ -22,15 +22,14 @@ TaskFlow Command is a collaborative task management web app with authentication,
 ## Tech Stack
 - Frontend: HTML, CSS, Vanilla JavaScript, Bootstrap 5
 - Backend: Node.js `http` (no external server framework)
-- Persistence: local JSON files in `data/`
+- Persistence: SQLite (`better-sqlite3`)
 
 ## Project Structure
 - `index.html` UI
 - `style.css` styles
 - `script.js` frontend logic
 - `server.js` backend + API + static file server
-- `data/tarefas.json` tasks storage
-- `data/users.json` users storage
+- `data/taskflow.db` SQLite database
 
 ## Run Locally
 ### Prerequisites
@@ -69,4 +68,4 @@ Open:
 
 ## Notes
 - If audio does not play initially, interact with the page once after login (browser autoplay policies).
-- Data is file-based and suitable for local/small-team usage.
+- If `data/tarefas.json` and `data/users.json` exist, data is auto-migrated to SQLite on startup.

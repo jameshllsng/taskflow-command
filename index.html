@@ -35,6 +35,25 @@
               <i class="bi bi-box-arrow-in-right me-1"></i> Entrar
             </button>
           </form>
+          <button id="btn-toggle-recuperacao" type="button" class="btn btn-link text-decoration-none mt-2 p-0">
+            Esqueci a senha
+          </button>
+          <form id="form-recuperacao" class="mt-3 d-none">
+            <div class="mb-2">
+              <label class="form-label" for="recuperacao-username">Usuário</label>
+              <input id="recuperacao-username" class="form-control" type="text" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="recuperacao-password">Nova senha</label>
+              <input id="recuperacao-password" class="form-control" type="password" minlength="3" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="recuperacao-password-confirm">Confirmar nova senha</label>
+              <input id="recuperacao-password-confirm" class="form-control" type="password" minlength="3" required>
+            </div>
+            <div id="aviso-recuperacao" class="alert alert-warning d-none py-2 mb-2" role="alert"></div>
+            <button type="submit" class="btn btn-noir-secondary w-100">Redefinir senha</button>
+          </form>
         </div>
       </div>
     </div>
@@ -51,6 +70,9 @@
           <div class="text-end">
             <small id="usuario-logado" class="opacity-75 d-block"></small>
             <div class="d-flex gap-2 justify-content-end mt-2 flex-wrap">
+              <button id="btn-theme-toggle" class="btn btn-noir-secondary btn-sm" title="Alternar tema">
+                <i id="icon-theme-toggle" class="bi bi-brightness-high"></i>
+              </button>
               <button id="btn-home" class="btn btn-noir-secondary btn-sm d-none">
                 <i class="bi bi-house me-1"></i> Chamados
               </button>
@@ -97,11 +119,13 @@
             <div id="aviso" class="alert alert-warning d-none py-2 mb-3" role="alert" aria-live="polite"></div>
 
             <div class="filtros d-flex flex-wrap gap-2 mb-4 justify-content-center">
+              <button class="btn btn-noir-secondary filtro" data-status="minhas">Minhas Tarefas</button>
               <button class="btn btn-noir-secondary filtro active btn-noir-primary" data-status="todas">Todas</button>
               <button class="btn btn-noir-secondary filtro" data-status="nova">Nova</button>
               <button class="btn btn-noir-secondary filtro" data-status="andamento">Andamento</button>
               <button class="btn btn-noir-secondary filtro" data-status="concluida">Concluída</button>
               <button class="btn btn-noir-secondary filtro" data-status="aguardando">Aguardando</button>
+              <button id="filtro-mobile-toggle" class="btn btn-noir-secondary d-none" type="button">Filtro: Todas</button>
             </div>
 
             <ul id="tarefas" class="list-unstyled"></ul>
@@ -116,10 +140,13 @@
             <div id="aviso-usuarios" class="alert alert-warning d-none py-2 mb-3" role="alert"></div>
             <form id="form-usuario" class="row g-2 mb-4">
               <input type="hidden" id="usuario-id">
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <input id="usuario-nome" class="form-control" type="text" placeholder="Usuário" required>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
+                <input id="usuario-display-name" class="form-control" type="text" placeholder="Nome de exibição" required>
+              </div>
+              <div class="col-md-3">
                 <input id="usuario-senha" class="form-control" type="password" placeholder="Senha (opcional na edição)">
               </div>
               <div class="col-md-2">
@@ -128,7 +155,7 @@
                   <option value="admin">Admin</option>
                 </select>
               </div>
-              <div class="col-md-2 d-grid">
+              <div class="col-md-1 d-grid">
                 <button type="submit" class="btn btn-noir-primary">Salvar</button>
               </div>
               <div class="col-12 d-grid">

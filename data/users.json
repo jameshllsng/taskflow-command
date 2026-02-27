@@ -2,43 +2,49 @@
   {
     "id": "8ddecf53-46c8-4a7a-a6f0-bdab786713d0",
     "username": "admin",
-    "passwordHash": "scrypt$ef885781b445e76a7c373da957b1be94$bba8a32025abb9f103235dcc80f51247b2fce625e493e61f5f55b3e573e1526d50895def31ceeedd405cca186f498c1f3e049e13d7f747ebca9eef24c8452447",
+    "passwordHash": "scrypt$e02b093c9d195d9a42121c19d370fbef$655f4954eaaedc50ed0238d1eca397d416716e10819d5fb1e5580ad946d89f2eb6d2d932970adc411ff18179d8c5fd1427e57e938aad8f6e945f75c37fbd78d3",
     "role": "admin",
-    "createdAt": 1772127534144
+    "createdAt": 1772127534144,
+    "displayName": "admin"
   },
   {
     "id": "a73b8855-a834-459f-90d1-99eacbea19b7",
     "username": "gabriel",
     "passwordHash": "scrypt$8de5ced1699e3f0f8b0982a428d62d66$97fbcef62a47fbcadfca695437b0cea8426f21c45550acc08231f81b35693e6ad4a4bf250d8c26402a571045fee8c137a003e3bee8e38561c1a788ff8873e851",
     "role": "admin",
-    "createdAt": 1772127644004
+    "createdAt": 1772127644004,
+    "displayName": "Gabriel"
   },
   {
     "id": "bbe154c5-033e-4b06-941e-9b49866046eb",
     "username": "luis",
     "passwordHash": "scrypt$87a844c44765d1d5e57c12192eddcd2c$44b7956cb3ea2875600162351bb7cd02874602f0ddddb79199450c0f4db46aa074d3fb7545844ca8218a7c0b5ce4a453822e2738914ee508d09c01231a066edc",
     "role": "admin",
-    "createdAt": 1772127658438
+    "createdAt": 1772127658438,
+    "displayName": "Luís"
   },
   {
     "id": "6c0fe2bc-29f6-40d6-a7d6-100203af6b38",
     "username": "ana",
     "passwordHash": "scrypt$cfebb930ecf5de34d891cce981ab9b98$5014759868f69e25dab3c0b167b99d9efb679c92659ccc6b78464118bdf1969c641781d3bee204f6b61552e07e23bbc700310a2f2b8fea9d6b505bce1ef5259a",
     "role": "user",
-    "createdAt": 1772129097814
+    "createdAt": 1772129097814,
+    "displayName": "Ana Júlia"
   },
   {
     "id": "a12d532c-8d89-4c79-889a-665a892318ce",
     "username": "arthur",
     "passwordHash": "scrypt$8448286e5cb2e89d5c85dd673f38b0f5$40c26918ce887de25e3d085275bba047a15bb625250552de30cd5570267520776a8679fa925080f1682c3aca3d8f78b037b5b50a0176c885356944ddf74ee8f8",
     "role": "user",
-    "createdAt": 1772129105684
+    "createdAt": 1772129105684,
+    "displayName": "Arthur"
   },
   {
     "id": "e8fd9001-7ef9-403e-81ba-ee93fcc963a1",
     "username": "vinicius",
     "passwordHash": "scrypt$5a55e81a5435cb26dbbfed6e6d7965cb$2fc14d884440ead4baf1595746bd834d837c9bcc2e5b29887c8ed784165ae607b156592e6a3f83029bd03481a2773f657763769e00b95534297998763cd6ca8e",
     "role": "admin",
-    "createdAt": 1772129114656
+    "createdAt": 1772129114656,
+    "displayName": "Vinícius"
   }
 ]

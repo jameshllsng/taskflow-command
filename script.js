@@ -6,6 +6,7 @@ const API_BASE =
 
 const STORAGE_KEY = "tarefas";
 const TOKEN_KEY = "taskflow_session_token";
+const THEME_KEY = "taskflow_theme";
 const STATUS_LIST = ["nova", "andamento", "concluida", "aguardando"];
 const SYNC_INTERVAL_MS = 5000;
 
@@ -15,7 +16,15 @@ const loginForm = document.getElementById("login-form");
 const loginUsername = document.getElementById("login-username");
 const loginPassword = document.getElementById("login-password");
 const avisoLogin = document.getElementById("aviso-login");
+const btnToggleRecuperacao = document.getElementById("btn-toggle-recuperacao");
+const formRecuperacao = document.getElementById("form-recuperacao");
+const recuperacaoUsername = document.getElementById("recuperacao-username");
+const recuperacaoPassword = document.getElementById("recuperacao-password");
+const recuperacaoPasswordConfirm = document.getElementById("recuperacao-password-confirm");
+const avisoRecuperacao = document.getElementById("aviso-recuperacao");
 const usuarioLogadoLabel = document.getElementById("usuario-logado");
+const btnThemeToggle = document.getElementById("btn-theme-toggle");
+const iconThemeToggle = document.getElementById("icon-theme-toggle");
 const btnLogout = document.getElementById("btn-logout");
 const btnHome = document.getElementById("btn-home");
 const btnUsuarios = document.getElementById("btn-usuarios");
@@ -38,6 +47,7 @@ const painelUsuarios = document.getElementById("painel-usuarios");
 const formUsuario = document.getElementById("form-usuario");
 const campoUsuarioId = document.getElementById("usuario-id");
 const campoUsuarioNome = document.getElementById("usuario-nome");
+const campoUsuarioDisplayName = document.getElementById("usuario-display-name");
 const campoUsuarioSenha = document.getElementById("usuario-senha");
 const campoUsuarioPapel = document.getElementById("usuario-papel");
 const btnCancelarEdicaoUsuario = document.getElementById("btn-cancelar-edicao-usuario");
@@ -48,6 +58,7 @@ const avisoAdminChamados = document.getElementById("aviso-admin-chamados");
 const selectAllChamados = document.getElementById("select-all-chamados");
 const btnExcluirSelecionados = document.getElementById("btn-excluir-selecionados");
 const contadorSelecionados = document.getElementById("contador-selecionados");
+const filtroMobileToggle = document.getElementById("filtro-mobile-toggle");
 const popupNotificacao = document.getElementById("popup-notificacao");
 const popupNotificacaoTexto = document.getElementById("popup-notificacao-texto");
 const popupOverlay = document.getElementById("popup-overlay");
@@ -68,6 +79,32 @@ let currentView = "tarefas";
 let usuariosAtribuicao = [];
 let popupTimeout = null;
 let audioUnlocked = false;
+const FILTER_FLOW = ["minhas", "todas", "nova", "andamento", "concluida", "aguardando"];
+const FILTER_LABELS = {
+  minhas: "Minhas Tarefas",
+  todas: "Todas",
+  nova: "Nova",
+  andamento: "Andamento",
+  concluida: "Concluída",
+  aguardando: "Aguardando",
+};
+
+function atualizarIconeTema(theme) {
+  if (!iconThemeToggle) return;
+  iconThemeToggle.className = theme === "light" ? "bi bi-moon-stars" : "bi bi-brightness-high";
+}
+
+function aplicarTema(theme) {
+  const temaFinal = theme === "light" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", temaFinal);
+  localStorage.setItem(THEME_KEY, temaFinal);
+  atualizarIconeTema(temaFinal);
+}
+
+function alternarTema() {
+  const atual = document.documentElement.getAttribute("data-theme") || "dark";
+  aplicarTema(atual === "dark" ? "light" : "dark");
+}
 
 function escaparHtml(texto) {
   return String(texto)
@@ -81,6 +118,17 @@ function escaparHtml(texto) {
 function mostrarAvisoLogin(mensagem) {
   avisoLogin.textContent = mensagem;
   avisoLogin.classList.remove("d-none");
+}
+
+function mostrarAvisoRecuperacao(mensagem, tipo = "warning") {
+  avisoRecuperacao.className = `alert alert-${tipo} py-2 mb-2`;
+  avisoRecuperacao.textContent = mensagem;
+  avisoRecuperacao.classList.remove("d-none");
+}
+
+function limparAvisoRecuperacao() {
+  avisoRecuperacao.classList.add("d-none");
+  avisoRecuperacao.textContent = "";
 }
 
 function limparAvisoLogin() {
@@ -172,6 +220,7 @@ function tocarSomNotificacao() {
 function mostrarPopupNotificacao(mensagem) {
   if (!popupNotificacao || !popupNotificacaoTexto) return;
   popupNotificacaoTexto.textContent = mensagem;
+  popupNotificacao.classList.remove("popup-notificacao--corner");
   popupNotificacao.style.top = "50%";
   popupNotificacao.style.left = "50%";
   popupNotificacao.style.right = "auto";
@@ -185,6 +234,12 @@ function mostrarPopupNotificacao(mensagem) {
     popupNotificacao.classList.add("d-none");
     popupOverlay?.classList.add("d-none");
   }, 8000);
+}
+
+function minimizarPopupNotificacao() {
+  if (!popupNotificacao || popupNotificacao.classList.contains("d-none")) return;
+  popupNotificacao.classList.add("popup-notificacao--corner");
+  popupOverlay?.classList.add("d-none");
 }
 
 function unlockAudioOnce() {
@@ -242,7 +297,7 @@ function authHeaders(contentType = true) {
 function nomeUsuarioPorId(userId, fallback = "") {
   if (!userId) return "Sem atribuição";
   const user = usuariosAtribuicao.find((u) => u.id === userId);
-  return user?.username || fallback || "Usuário removido";
+  return user?.displayName || fallback || "Usuário removido";
 }
 
 function renderSelectAtribuicao() {
@@ -252,7 +307,7 @@ function renderSelectAtribuicao() {
   const opcoes = ['<option value="">Sem atribuição</option>']
     .concat(
       usuariosAtribuicao.map(
-        (u) => `<option value="${escaparHtml(u.id)}">${escaparHtml(u.username)}</option>`,
+        (u) => `<option value="${escaparHtml(u.id)}">${escaparHtml(u.displayName || u.username)}</option>`,
       ),
     )
     .join("");
@@ -324,7 +379,7 @@ function atualizarCabecalhoUsuario() {
   }
 
   const tipo = usuarioAtual.role === "admin" ? "Admin" : "Usuário";
-  usuarioLogadoLabel.textContent = `${usuarioAtual.username} (${tipo})`;
+  usuarioLogadoLabel.textContent = `${usuarioAtual.displayName || usuarioAtual.username} (${tipo})`;
 
   if (usuarioAtual.role === "admin") {
     btnUsuarios.classList.remove("d-none");
@@ -492,11 +547,42 @@ function renderEstadoVazio() {
   `;
 }
 
+function aplicarFiltroVisual(status) {
+  document.querySelectorAll(".filtro").forEach((f) => {
+    f.classList.remove("active", "btn-noir-primary");
+  });
+
+  const alvo = document.querySelector(`.filtro[data-status="${status}"]`);
+  if (alvo) {
+    alvo.classList.add("active", "btn-noir-primary");
+  }
+  if (filtroMobileToggle) {
+    filtroMobileToggle.textContent = `Filtro: ${FILTER_LABELS[status] || status}`;
+  }
+}
+
+function filtroPadraoPorPerfil() {
+  if (usuarioAtual?.role === "user") {
+    statusFiltro = "minhas";
+  } else if (!statusFiltro) {
+    statusFiltro = "todas";
+  }
+  aplicarFiltroVisual(statusFiltro);
+}
+
+function tarefaPassaNoFiltro(tarefa) {
+  if (statusFiltro === "todas") return true;
+  if (statusFiltro === "minhas") {
+    return tarefa.atribuidaParaId === usuarioAtual?.id;
+  }
+  return tarefa.status === statusFiltro;
+}
+
 function renderTarefas() {
   listaTarefas.innerHTML = "";
   const tarefasFiltradas = tarefas
     .map((tarefa, indiceReal) => ({ tarefa, indiceReal }))
-    .filter(({ tarefa }) => statusFiltro === "todas" || tarefa.status === statusFiltro);
+    .filter(({ tarefa }) => tarefaPassaNoFiltro(tarefa));
 
   if (tarefasFiltradas.length === 0) {
     renderEstadoVazio();
@@ -507,6 +593,8 @@ function renderTarefas() {
   tarefasFiltradas.forEach(({ tarefa, indiceReal }) => {
     const li = document.createElement("li");
     li.className = `todo-item list-group-item p-3 mb-3 ${tarefa.status}`;
+    const podeExcluir = usuarioAtual?.role === "admin";
+    const podeEditarCampos = usuarioAtual?.role === "admin";
 
     let metaHtml = `<small><i class="bi bi-calendar-event me-1"></i>${formatarData(tarefa.criada)}</small>`;
 
@@ -545,9 +633,17 @@ function renderTarefas() {
         <div class="meta-text">${metaHtml}</div>
       </div>
       <div class="acoes d-flex gap-2">
-        <button class="btn btn-noir-edit btn-sm" onclick="editar(${indiceReal})" title="Editar tarefa"><i class="bi bi-pencil"></i></button>
+        ${
+          podeEditarCampos
+            ? `<button class="btn btn-noir-edit btn-sm" onclick="editar(${indiceReal})" title="Editar tarefa"><i class="bi bi-pencil"></i></button>`
+            : ""
+        }
         <button class="btn status-btn btn-sm" onclick="mudarStatus(${indiceReal})" title="Avançar status"><i class="bi bi-arrow-right-circle"></i> <span class="status-text">${tarefa.status.charAt(0).toUpperCase() + tarefa.status.slice(1)}</span></button>
-        <button class="btn-excluir btn btn-danger btn-sm" onclick="excluir(${indiceReal})" title="Excluir"><i class="bi bi-trash"></i></button>
+        ${
+          podeExcluir
+            ? `<button class="btn-excluir btn btn-danger btn-sm" onclick="excluir(${indiceReal})" title="Excluir"><i class="bi bi-trash"></i></button>`
+            : ""
+        }
       </div>
     `;
 
@@ -641,6 +737,12 @@ async function adicionarTarefa() {
   }
 
   if (editandoId !== null) {
+    if (usuarioAtual?.role !== "admin") {
+      mostrarAviso("Usuário comum não pode editar dados da tarefa após criação.");
+      limparModoEdicao();
+      return;
+    }
+
     const tarefaAtual = tarefas[editandoId];
     const statusAnterior = tarefaAtual.status;
 
@@ -667,7 +769,7 @@ async function adicionarTarefa() {
       criada: Date.now(),
       prazo: prazoFinal,
       abertaPorId: usuarioAtual?.id || null,
-      abertaPorNome: usuarioAtual?.username || "Sistema",
+      abertaPorNome: usuarioAtual?.displayName || usuarioAtual?.username || "Sistema",
       atribuidaParaId: selectAtribuidaPara.value || null,
       atribuidaParaNome: nomeUsuarioPorId(selectAtribuidaPara.value || null, ""),
       concluida: selectStatus.value === "concluida" ? Date.now() : null,
@@ -702,6 +804,11 @@ function editarStatusMobile(id) {
 }
 
 function editar(id) {
+  if (usuarioAtual?.role !== "admin") {
+    mostrarAviso("Usuário comum não pode editar dados da tarefa após criação.");
+    return;
+  }
+
   editandoId = id;
   inputTarefa.value = tarefas[id].texto;
   inputDescricaoTarefa.value = tarefas[id].descricao || "";
@@ -730,6 +837,11 @@ function mudarStatus(id) {
 }
 
 function excluir(id) {
+  if (usuarioAtual?.role !== "admin") {
+    mostrarAviso("Apenas administradores podem excluir tarefas.");
+    return;
+  }
+
   if (!confirm("Excluir esta tarefa permanentemente?")) return;
 
   tarefas.splice(id, 1);
@@ -880,6 +992,7 @@ function limparFormularioUsuario() {
   usuarioEditandoId = null;
   campoUsuarioId.value = "";
   campoUsuarioNome.value = "";
+  campoUsuarioDisplayName.value = "";
   campoUsuarioSenha.value = "";
   campoUsuarioPapel.value = "user";
   btnCancelarEdicaoUsuario.classList.add("d-none");
@@ -896,7 +1009,8 @@ function renderUsuarios(users) {
       (user) => `
       <li class="usuario-item d-flex justify-content-between align-items-center flex-wrap gap-2" data-id="${user.id}">
         <div>
-          <div class="fw-semibold">${escaparHtml(user.username)} <span class="badge ${user.role === "admin" ? "text-bg-danger" : "text-bg-secondary"}">${user.role}</span></div>
+          <div class="fw-semibold">${escaparHtml(user.displayName || user.username)} <span class="badge ${user.role === "admin" ? "text-bg-danger" : "text-bg-secondary"}">${user.role}</span></div>
+          <div class="usuario-meta">@${escaparHtml(user.username)}</div>
           <div class="usuario-meta">Criado em ${formatarData(user.createdAt)}</div>
         </div>
         <div class="d-flex gap-2">
@@ -932,6 +1046,7 @@ async function salvarUsuario(event) {
   event.preventDefault();
 
   const username = campoUsuarioNome.value.trim();
+  const displayName = campoUsuarioDisplayName.value.trim();
   const password = campoUsuarioSenha.value;
   const role = campoUsuarioPapel.value === "admin" ? "admin" : "user";
 
@@ -944,8 +1059,12 @@ async function salvarUsuario(event) {
     mostrarAvisoUsuarios("Senha deve ter ao menos 3 caracteres.", "danger");
     return;
   }
+  if (displayName.length < 2) {
+    mostrarAvisoUsuarios("Nome de exibição deve ter ao menos 2 caracteres.", "danger");
+    return;
+  }
 
-  const payload = { username, role };
+  const payload = { username, displayName, role };
   if (password) payload.password = password;
 
   const endpoint = usuarioEditandoId ? `/users/${usuarioEditandoId}` : "/users";
@@ -1008,6 +1127,7 @@ async function prepararEdicaoUsuario(userId) {
   usuarioEditandoId = user.id;
   campoUsuarioId.value = user.id;
   campoUsuarioNome.value = user.username;
+  campoUsuarioDisplayName.value = user.displayName || user.username;
   campoUsuarioSenha.value = "";
   campoUsuarioPapel.value = user.role;
   btnCancelarEdicaoUsuario.classList.remove("d-none");
@@ -1028,6 +1148,7 @@ async function iniciarAppPosLogin() {
   mostrarApp();
   abrirView("tarefas");
   atualizarCabecalhoUsuario();
+  filtroPadraoPorPerfil();
   limparAvisoLogin();
   definirPrazoPadrao();
   await carregarUsuariosParaAtribuicao();
@@ -1081,9 +1202,52 @@ loginForm.addEventListener("submit", async (event) => {
   }
 });
 
+btnToggleRecuperacao?.addEventListener("click", () => {
+  formRecuperacao.classList.toggle("d-none");
+  limparAvisoRecuperacao();
+});
+
+formRecuperacao?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  limparAvisoRecuperacao();
+
+  const username = recuperacaoUsername.value.trim();
+  const newPassword = recuperacaoPassword.value;
+  const confirm = recuperacaoPasswordConfirm.value;
+
+  if (!username || newPassword.length < 3) {
+    mostrarAvisoRecuperacao("Preencha usuário e uma senha com ao menos 3 caracteres.", "danger");
+    return;
+  }
+  if (newPassword !== confirm) {
+    mostrarAvisoRecuperacao("As senhas não conferem.", "danger");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, newPassword }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      mostrarAvisoRecuperacao(payload.error || "Não foi possível redefinir a senha.", "danger");
+      return;
+    }
+    mostrarAvisoRecuperacao("Senha redefinida com sucesso. Faça login com a nova senha.", "success");
+    recuperacaoPassword.value = "";
+    recuperacaoPasswordConfirm.value = "";
+  } catch {
+    mostrarAvisoRecuperacao("Falha de conexão com o servidor.", "danger");
+  }
+});
+
 btnLogout.addEventListener("click", async () => {
   await forcarLogout("Você saiu da sessão.");
 });
+
+btnThemeToggle?.addEventListener("click", alternarTema);
 
 btnUsuarios.addEventListener("click", async () => {
   if (usuarioAtual?.role !== "admin") return;
@@ -1144,16 +1308,23 @@ btnExcluirSelecionados.addEventListener("click", () => {
   void excluirChamadosSelecionadosAdmin();
 });
 
+popupOverlay?.addEventListener("click", minimizarPopupNotificacao);
+popupNotificacao?.addEventListener("click", minimizarPopupNotificacao);
+
 containerFiltros.addEventListener("click", (event) => {
   const btnFiltro = event.target.closest(".filtro");
   if (!btnFiltro) return;
 
-  document.querySelectorAll(".filtro").forEach((f) => {
-    f.classList.remove("active", "btn-noir-primary");
-  });
-
-  btnFiltro.classList.add("active", "btn-noir-primary");
   statusFiltro = btnFiltro.dataset.status;
+  aplicarFiltroVisual(statusFiltro);
+  renderTarefas();
+});
+
+filtroMobileToggle?.addEventListener("click", () => {
+  const idxAtual = FILTER_FLOW.indexOf(statusFiltro);
+  const prox = idxAtual >= 0 ? FILTER_FLOW[(idxAtual + 1) % FILTER_FLOW.length] : FILTER_FLOW[0];
+  statusFiltro = prox;
+  aplicarFiltroVisual(statusFiltro);
   renderTarefas();
 });
 
@@ -1175,6 +1346,8 @@ inputTarefa.addEventListener("keydown", (event) => {
 window.addEventListener("resize", renderTarefas);
 
 window.addEventListener("load", async () => {
+  const temaSalvo = localStorage.getItem(THEME_KEY) || "dark";
+  aplicarTema(temaSalvo);
   initAudio();
   await initNotificacoes();
 

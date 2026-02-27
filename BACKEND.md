@@ -9,6 +9,7 @@ npm start
 ```
 
 Servidor: `http://localhost:3000`
+Rede local: `http://SEU_IP_LOCAL:3000`
 
 ## Login padrão
 - Usuário: `admin`
@@ -38,9 +39,10 @@ Servidor: `http://localhost:3000`
 - `GET /api/users/options`
 
 ## Persistência
-- Tarefas: `data/tarefas.json`
-- Usuários: `data/users.json`
+- Banco: `data/taskflow.db` (SQLite)
+- Na primeira execução, se existir `data/tarefas.json` e `data/users.json`, ocorre migração automática para o SQLite.
 
 ## Observações
 - Abra pelo servidor (`http://localhost:3000`) para login e sessão.
 - O frontend sincroniza tarefas automaticamente sem recarregar a página.
+- Se outro dispositivo da rede não acessar, libere a porta `3000/tcp` no firewall da máquina.
